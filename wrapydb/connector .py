@@ -8,19 +8,19 @@ from contextlib import contextmanager
 
 
 class WrapydbConnector:
-    def __init__(self, dct_data):
-        self.dct_data = dct_data
+    def __init__(self, connection_settings):
+        self.connection_settings = connection_settings
 
     @contextmanager
     def _tunnel_context(self):
         tunnel = SSHTunnelForwarder(
-            (self.dct_data["ssh_host"], int(self.dct_data["ssh_port"])),
-            ssh_username=self.dct_data["ssh_username"],
-            ssh_private_key=self.dct_data["ssh_private_key"],
-            ssh_private_key_password=self.dct_data["ssh_private_key_password"],
+            (self.connection_settings["ssh_host"], int(self.connection_settings["ssh_port"])),
+            ssh_username=self.connection_settings["ssh_username"],
+            ssh_private_key=self.connection_settings["ssh_private_key"],
+            ssh_private_key_password=self.connection_settings["ssh_private_key_password"],
             remote_bind_address=(
-                self.dct_data["db_host"],
-                int(self.dct_data["db_port"]),
+                self.connection_settings["db_host"],
+                int(self.connection_settings["db_port"]),
             ),
         )
         tunnel.start()
@@ -34,9 +34,9 @@ class WrapydbConnector:
         with self._tunnel_context() as tunnel:
             connection = pymysql.connect(
                 host="127.0.0.1",
-                user=self.dct_data["db_user"],
-                passwd=self.dct_data["db_password"],
-                db=self.dct_data["db_name"],
+                user=self.connection_settings["db_user"],
+                passwd=self.connection_settings["db_password"],
+                db=self.connection_settings["db_name"],
                 port=tunnel.local_bind_port,
                 cursorclass=cursorclass,
             )
@@ -46,7 +46,7 @@ class WrapydbConnector:
                 connection.close()
 
     def _get_database_url(self, tunnel):
-        return f'mysql+pymysql://{self.dct_data["db_user"]}:{self.dct_data["db_password"]}@127.0.0.1:{tunnel.local_bind_port}/{self.dct_data["db_name"]}'
+        return f'mysql+pymysql://{self.connection_settings ["db_user"]}:{self.connection_settings ["db_password"]}@127.0.0.1:{tunnel.local_bind_port}/{self.connection_settings ["db_name"]}'
 
     def execute_query(self, query, return_dict=False):
         cursorclass = pymysql.cursors.DictCursor if return_dict else pymysql.cursors.Cursor
