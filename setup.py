@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 NAME = "Wrapydb"
-VERSION = "0.1"
+VERSION = "0.1.0"
 PYTHON_REQUIRES = ">=3.7"
 INSTALL_REQUIRES = ["pymysql>=1.0.2", "sqlalchemy>=1.4.22", "sshtunnel>=0.4.0", "pandas>=1.3.0"]
 
