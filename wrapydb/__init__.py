@@ -1,1 +1,1 @@
-from wrapydb.connector import *
+from wrapydb.WrapydbConnector import *
