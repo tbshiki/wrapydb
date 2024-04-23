@@ -44,4 +44,8 @@ connection_settings = {
 connector = WrapydbConnector(connection_settings)
 ```
 
+### Query Execution
+results = connector.execute_query(query, params=params)
+
+
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)

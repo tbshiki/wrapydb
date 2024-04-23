@@ -48,13 +48,22 @@ class WrapydbConnector:
     def _get_database_url(self, tunnel):
         return f'mysql+pymysql://{self.connection_settings ["db_user"]}:{self.connection_settings ["db_password"]}@127.0.0.1:{tunnel.local_bind_port}/{self.connection_settings ["db_name"]}'
 
-    def execute_query(self, query, return_dict=False):
+    def execute_query(self, query, params=None, return_dict=False):
         cursorclass = pymysql.cursors.DictCursor if return_dict else pymysql.cursors.Cursor
-        with self._db_connection(cursorclass=cursorclass) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(query)
-                result = cursor.fetchall()
-                return result
+        try:
+            with self._db_connection(cursorclass=cursorclass) as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(query, params)
+                    connection.commit()  # トランザクションをコミット
+                    try:
+                        result = cursor.fetchall()
+                        return result
+                    except Exception as e:
+                        # fetchall()が失敗した場合（例: INSERT文の実行後）は、特に結果を返さない
+                        return None
+        except Exception as e:
+            # ここでエラーメッセージを返すか、カスタムエラーを投げる
+            return f"An error occurred: {e}"
 
     def execute_update(self, query):
         with self._db_connection() as connection:
