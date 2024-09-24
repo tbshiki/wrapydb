@@ -1,4 +1,4 @@
-# Wrapydb
+# wrapydb
 
 ## Configuration
 

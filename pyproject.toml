@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wrapydb"
+version = "0.1.1"
+description = "A utility for simplified, secure database connections through SSH tunnels using pymysql, sshtunnel, and SQLAlchemy"
+readme = "README.md"
+authors = [
+    {name = "tbshiki", email = "info@tbshiki.com"}
+]
+requires-python = ">=3.7"
+keywords = ["wrapydb", "sql", "db", "ssh"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [
+    "pymysql>=1.0.2",
+    "sqlalchemy>=1.4.22",
+    "sshtunnel>=0.4.0",
+    "pandas>=1.3.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/tbshiki/wrapydb"
+
+[tool.setuptools]
+packages = ["wrapydb"]

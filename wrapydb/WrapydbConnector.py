@@ -1,8 +1,6 @@
 import pymysql
 from sqlalchemy import create_engine
-
 from sshtunnel import SSHTunnelForwarder
-
 import pandas as pd
 from contextlib import contextmanager
 
@@ -10,6 +8,7 @@ from contextlib import contextmanager
 class WrapydbConnector:
     def __init__(self, connection_settings):
         self.connection_settings = connection_settings
+        self.connection = None
 
     @contextmanager
     def _tunnel_context(self):
@@ -46,29 +45,24 @@ class WrapydbConnector:
                 connection.close()
 
     def _get_database_url(self, tunnel):
-        return f'mysql+pymysql://{self.connection_settings ["db_user"]}:{self.connection_settings ["db_password"]}@127.0.0.1:{tunnel.local_bind_port}/{self.connection_settings ["db_name"]}'
+        return f'mysql+pymysql://{self.connection_settings["db_user"]}:{self.connection_settings["db_password"]}@127.0.0.1:{tunnel.local_bind_port}/{self.connection_settings["db_name"]}'
 
     def execute_query(self, query, params=None, return_dict=False):
         cursorclass = pymysql.cursors.DictCursor if return_dict else pymysql.cursors.Cursor
-        try:
-            with self._db_connection(cursorclass=cursorclass) as connection:
-                with connection.cursor() as cursor:
-                    cursor.execute(query, params)
-                    connection.commit()  # トランザクションをコミット
-                    try:
-                        result = cursor.fetchall()
-                        return result
-                    except Exception as e:
-                        # fetchall()が失敗した場合（例: INSERT文の実行後）は、特に結果を返さない
-                        return None
-        except Exception as e:
-            # ここでエラーメッセージを返すか、カスタムエラーを投げる
-            return f"An error occurred: {e}"
+        with self._db_connection(cursorclass=cursorclass) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(query, params)
+                connection.commit()
+                try:
+                    result = cursor.fetchall()
+                    return result
+                except Exception as e:
+                    return None
 
-    def execute_update(self, query):
+    def execute_update(self, query, params=None):
         with self._db_connection() as connection:
             with connection.cursor() as cursor:
-                cursor.execute(query)
+                cursor.execute(query, params)
                 connection.commit()
 
     def df_to_sql(self, df, table_name, if_exists="append", index=False):
@@ -82,3 +76,25 @@ class WrapydbConnector:
             database_url = self._get_database_url(tunnel)
             engine = create_engine(database_url)
             return pd.read_sql_query(query, engine)
+
+    @contextmanager
+    def cursor(self):
+        with self._db_connection() as connection:
+            cursor = connection.cursor()
+            try:
+                yield cursor
+            finally:
+                cursor.close()
+
+    def commit(self):
+        if self.connection:
+            self.connection.commit()
+
+    def rollback(self):
+        if self.connection:
+            self.connection.rollback()
+
+    def close(self):
+        if self.connection:
+            self.connection.close()
+            self.connection = None
