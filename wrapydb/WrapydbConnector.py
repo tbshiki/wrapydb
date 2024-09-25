@@ -65,6 +65,20 @@ class WrapydbConnector:
                 cursor.execute(query, params)
                 connection.commit()
 
+    def execute_batch_update(self, query, params_list, batch_size=100):
+        """
+        複数のSQL命令を一度に処理するバッチ更新関数
+        query: 実行するSQLクエリ（プレースホルダー付き）
+        params_list: 各SQLクエリのパラメータのリスト（例: [(param1, param2), (param1, param2), ...]）
+        batch_size: 一度に実行するSQL命令の数
+        """
+        with self._db_connection() as connection:
+            with connection.cursor() as cursor:
+                for i in range(0, len(params_list), batch_size):
+                    batch = params_list[i : i + batch_size]
+                    cursor.executemany(query, batch)
+                connection.commit()
+
     def df_to_sql(self, df, table_name, if_exists="append", index=False):
         with self._tunnel_context() as tunnel:
             database_url = self._get_database_url(tunnel)
