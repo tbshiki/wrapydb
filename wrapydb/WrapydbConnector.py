@@ -3,6 +3,28 @@ from sqlalchemy import create_engine
 from sshtunnel import SSHTunnelForwarder
 import pandas as pd
 from contextlib import contextmanager
+import os
+import paramiko
+
+
+class WrapydbSSHTunnelForwarder(SSHTunnelForwarder):
+    def _consolidate_auth(self, ssh_password=None, ssh_pkey=None, ssh_pkey_password=None, **kwargs):
+        loaded_keys = []
+        if ssh_pkey:
+            if isinstance(ssh_pkey, str) and os.path.exists(ssh_pkey):
+                key_classes = [paramiko.RSAKey, paramiko.ECDSAKey, paramiko.Ed25519Key]
+                if hasattr(paramiko, 'DSSKey'):
+                    key_classes.append(paramiko.DSSKey)
+                for key_class in key_classes:
+                    try:
+                        k = key_class.from_private_key_file(ssh_pkey, password=ssh_pkey_password)
+                        loaded_keys.append(k)
+                        break
+                    except Exception:
+                        continue
+            elif isinstance(ssh_pkey, paramiko.PKey):
+                loaded_keys.append(ssh_pkey)
+        return ssh_password, loaded_keys
 
 
 class WrapydbConnector:
@@ -12,7 +34,7 @@ class WrapydbConnector:
 
     @contextmanager
     def _tunnel_context(self):
-        tunnel = SSHTunnelForwarder(
+        tunnel = WrapydbSSHTunnelForwarder(
             (self.connection_settings["ssh_host"], int(self.connection_settings["ssh_port"])),
             ssh_username=self.connection_settings["ssh_username"],
             ssh_private_key=self.connection_settings["ssh_private_key"],
@@ -21,12 +43,14 @@ class WrapydbConnector:
                 self.connection_settings["db_host"],
                 int(self.connection_settings["db_port"]),
             ),
+            allow_agent=False,
+            host_pkey_directories=[],
         )
         tunnel.start()
         try:
             yield tunnel
         finally:
-            tunnel.close()
+            tunnel.stop()
 
     @contextmanager
     def _db_connection(self, cursorclass=pymysql.cursors.Cursor):
